@@ -1,0 +1,17 @@
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/target/
+*.pyc
+*.exe
+*.zip
+*.tar.gz
+*.sha256
+rm-projects-rust-*/
+.DS_Store
+.vscode/
+.idea/
+
+# Local-only build output.
+.reference-build/
