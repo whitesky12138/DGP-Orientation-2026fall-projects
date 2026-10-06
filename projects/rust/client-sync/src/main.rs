@@ -143,15 +143,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         match result {
             Ok((status, value)) => {
-                if matches!(command.as_str(), "echo" | "get" | "put") {
-                    println!("HTTP {status}");
-                    if let Some(text) = value.get("data").and_then(Value::as_str) {
-                        println!("{text}");
-                    } else {
-                        println!("{value}");
-                    }
+                println!("HTTP {status}");
+                if let Some(text) = value.get("data").and_then(Value::as_str) {
+                    println!("{text}");
                 } else {
-                    println!("{status} {value}");
+                    println!("{value}");
                 }
                 if command == "login"
                     && status == 200
