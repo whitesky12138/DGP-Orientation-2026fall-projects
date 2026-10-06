@@ -117,6 +117,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("GET", "")
             }
 
+            "delete" => {
+                let name = input("name: ")?;
+                dynamic_path = Some(format!("/texts/{name}"));
+
+                ("DELETE", "")
+            }
+
+            "delete-user" => ("DELETE", "/users/me"),
+
             _ => {
                 println!("Unknown command.");
                 continue;
@@ -134,7 +143,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         match result {
             Ok((status, value)) => {
-                if command == "echo" {
+                if matches!(command.as_str(), "echo" | "get" | "put"){
                     println!("HTTP {status}");
                     if let Some(text) = value.get("data").and_then(Value::as_str) {
                         println!("{text}");
