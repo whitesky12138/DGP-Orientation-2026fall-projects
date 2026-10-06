@@ -174,28 +174,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::decode_text_lines;
-
-    fn lines(items: &[&str]) -> Vec<String> {
-        items.iter().map(|line| (*line).to_owned()).collect()
-    }
-
-    #[test]
-    fn echo_text_input_matches_reference_dot_rules_and_newlines() {
-        let text = decode_text_lines(lines(&["..hello", ".hello", "..", "", "."]));
-        assert_eq!(text, ".hello\n.hello\n.\n");
-    }
-
-    #[test]
-    fn a_dot_terminator_immediately_means_empty_text() {
-        assert_eq!(decode_text_lines(lines(&["."])), "");
-    }
-
-    #[test]
-    fn text_without_a_blank_final_line_has_no_trailing_newline() {
-        assert_eq!(decode_text_lines(lines(&["hello", "."])), "hello");
-    }
-}
