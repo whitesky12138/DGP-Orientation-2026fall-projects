@@ -18,6 +18,47 @@ fn input(prompt: &str) -> io::Result<String> {
     }
     Ok(line.trim_end_matches(['\r', '\n']).to_owned())
 }
+
+fn text_input() -> io::Result<String> {
+    println!("Text: enter . alone to finish; start a dot-leading line with an extra dot.");
+    println!(
+        "No implicit trailing newline; add a blank line to include one. . immediately means empty text."
+    );
+
+    let mut lines = Vec::new(); //save multi-line text
+
+    loop {
+        let line = input("| ")?;
+        let is_terminator = line == "."; //ture when entire line is '.'
+        lines.push(line);
+        if is_terminator {
+            break;
+        }
+    }
+
+    Ok(decode_text_lines(lines))
+}
+
+fn decode_text_lines(lines: impl IntoIterator<Item = String>) -> String {
+    let mut text_lines = Vec::new();
+
+    for line in lines {
+        if line == "." {
+            break;
+        }
+
+        // A doubled leading dot escapes one dot
+        let line = if let Some(rest) = line.strip_prefix("..") {
+            format!(".{rest}") // return one '.' before rest
+        } else {
+            line
+        };
+        text_lines.push(line);
+    }
+
+    text_lines.join("\n")
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let client = Client::builder()
@@ -52,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
             }
             "echo" => {
-                let text = input("text: ")?;
+                let text = text_input()?;
                 body = json!({"text": text});
                 ("POST", "/echo")
             }
@@ -76,7 +117,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         match result {
             Ok((status, value)) => {
-                println!("{status} {value}");
+                if command == "echo" {
+                    println!("HTTP {status}");
+                    if let Some(text) = value.get("data").and_then(Value::as_str) {
+                        println!("{text}");
+                    } else {
+                        println!("{value}");
+                    }
+                } else {
+                    println!("{status} {value}");
+                }
                 if command == "login"
                     && status == 200
                     && let Some(next) = value["data"]["token"].as_str()
@@ -94,4 +144,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::decode_text_lines;
+
+    fn lines(items: &[&str]) -> Vec<String> {
+        items.iter().map(|line| (*line).to_owned()).collect()
+    }
+
+    #[test]
+    fn echo_text_input_matches_reference_dot_rules_and_newlines() {
+        let text = decode_text_lines(lines(&["..hello", ".hello", "..", "", "."]));
+        assert_eq!(text, ".hello\n.hello\n.\n");
+    }
+
+    #[test]
+    fn a_dot_terminator_immediately_means_empty_text() {
+        assert_eq!(decode_text_lines(lines(&["."])), "");
+    }
+
+    #[test]
+    fn text_without_a_blank_final_line_has_no_trailing_newline() {
+        assert_eq!(decode_text_lines(lines(&["hello", "."])), "hello");
+    }
 }
