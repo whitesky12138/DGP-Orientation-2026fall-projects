@@ -117,6 +117,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("GET", "")
             }
 
+            _ => {
+                println!("Unknown command.");
+                continue;
+            }
         };
 
         let request_path = dynamic_path.as_deref().unwrap_or(path); // select the final path
