@@ -76,6 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Err(error) => return Err(error.into()),
         };
         let mut body = Value::Null;
+        let mut dynamic_path: Option<String> = None; // add dynamic path variables
         let (method, path) = match command.as_str() {
             "q" => break,
             "ping" => ("GET", "/ping"),
@@ -92,26 +93,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     },
                 )
             }
+
             "echo" => {
                 let text = text_input()?;
                 body = json!({"text": text});
                 ("POST", "/echo")
             }
 
-            "delete-user" | "put" | "get" | "delete" => {
-                println!("This task is not implemented in the starting code yet.");
-                continue;
+            "put" => {
+                let name = input("name: ")?;
+                let text = text_input()?;
+
+                dynamic_path = Some(format!("/texts/{name}"));
+                body = json!({"text": text});
+
+                ("PUT", "")
             }
-            _ => {
-                println!("Unknown command.");
-                continue;
+
+            "get" => {
+                let name = input("name: ")?;
+                dynamic_path = Some(format!("/texts/{name}"));
+
+                ("GET", "")
             }
+
         };
+
+        let request_path = dynamic_path.as_deref().unwrap_or(path); // select the final path
         let result = rm_client_sync::exchange(
             &client,
             &args.url,
             method.parse().unwrap(),
-            path,
+            request_path,
             &token,
             if body.is_null() { None } else { Some(&body) },
         );
@@ -136,7 +149,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if status == 401 {
                     println!("Please log in again.");
                 }
-                if status == 401 || (command == "logout" && status == 200) {
+                if status == 401
+                    || ((command == "logout" || command == "delete-user") && status == 200)
+                {
+                    // clear token when 401 or logout/delete
                     token.clear();
                 }
             }
