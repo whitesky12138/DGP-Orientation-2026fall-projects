@@ -6,9 +6,9 @@ use serde_json::{Value, json};
 use sha2::Sha256;
 use std::collections::BTreeMap;
 use std::sync::Mutex;
-use subtle::ConstantTimeEq;
-use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant};
+use subtle::ConstantTimeEq;
 
 pub const ROUTES: &[(&str, &str)] = &[
     ("GET", "/ping"),
@@ -74,7 +74,7 @@ impl Default for Service {
 
 impl Service {
     pub fn with_token_ttl_seconds(seconds: u64) -> Self {
-        assert!(seconds > 0, "token TTL must be positive");//validity period
+        assert!(seconds > 0, "token TTL must be positive"); //validity period
 
         Self {
             users: Mutex::new(BTreeMap::new()),
@@ -85,7 +85,7 @@ impl Service {
 }
 pub struct Service {
     pub users: Mutex<BTreeMap<String, User>>,
-    token_ttl: Duration, //validity period
+    token_ttl: Duration,     //validity period
     next_user_id: AtomicU64, //assign unique ID to new user to distinguish accounts at different life cycle stages
 }
 
@@ -179,13 +179,12 @@ impl Service {
                     return error(409, "Username exists");
                 }
 
-                let id = self
-                    .next_user_id
-                    .fetch_add(1, Ordering::Relaxed);
+                let id = self.next_user_id.fetch_add(1, Ordering::Relaxed);
 
                 users.insert(
                     name.into(),
                     User {
+                        id,
                         salt,
                         digest,
                         token: None,
@@ -212,13 +211,13 @@ impl Service {
 
             let token = new_token();
             let expires_at = Instant::now() + self.token_ttl; //count expiaration time of the token
-            let expires_in = self.token_ttl.as_secs();  //convert to integer seconds
-            
+            let expires_in = self.token_ttl.as_secs(); //convert to integer seconds
+
             user.token = Some(Session {
                 value: token.clone(),
                 expires_at,
             });
-            
+
             return (
                 200,
                 json!({
