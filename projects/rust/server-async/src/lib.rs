@@ -65,8 +65,24 @@ pub struct User {
     token: Option<Session>,
     pub texts: BTreeMap<String, String>,
 }
+//manually implement default
+impl Default for Service {
+    fn default() -> Self {
+        Self::with_token_ttl_seconds(300)
+    }
+}
 
-#[derive(Default)]
+impl Service {
+    pub fn with_token_ttl_seconds(seconds: u64) -> Self {
+        assert!(seconds > 0, "token TTL must be positive");//validity period
+
+        Self {
+            users: Mutex::new(BTreeMap::new()),
+            token_ttl: Duration::from_secs(seconds),
+            next_user_id: AtomicU64::new(1),
+        }
+    }
+}
 pub struct Service {
     pub users: Mutex<BTreeMap<String, User>>,
     token_ttl: Duration, //validity period
