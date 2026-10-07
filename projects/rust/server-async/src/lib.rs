@@ -202,7 +202,7 @@ impl Service {
                 (user.id,user.salt, user.digest)
             };
             let digest = password_hash(password, &salt);
-            
+
             let mut users = self.users.lock().unwrap();
             let Some(user) = users.get_mut(name) else {
                 return error(401, "Invalid username or password");
@@ -231,9 +231,15 @@ impl Service {
         if protected {
             let token = authorization.strip_prefix("Bearer ").unwrap_or("");
             let mut users = self.users.lock().unwrap();
+            
+            let now = Instant::now(); //record current time
             let name = users
                 .iter()
-                .find(|(_, user)| !token.is_empty() && user.token.as_deref() == Some(token))
+                .find(|(_, user)| {!token.is_empty() && user.token.as_ref().is_some_and(|session| {
+                                                session.value == token  //token values are the same
+                                                && now < session.expires_at //token not expired
+                                            })
+                })
                 .map(|(name, _)| name.clone());
             let Some(name) = name else {
                 return error(401, "Login required");
