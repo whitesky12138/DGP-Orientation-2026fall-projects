@@ -227,7 +227,7 @@ impl Service {
                 }),
             );
         }
-        
+
         //login verification
         let protected =
             path == "/texts"
@@ -252,7 +252,39 @@ impl Service {
                 return error(401, "Login required");
             };
             let user = users.get_mut(&name).unwrap();
-            // Later server task: check expiry and keep authorization and state mutation atomic.
+           
+            // implement PUT /texts/{name}
+            if let Some(text_name) = text_name(path){
+                if !valid_name(text_name, 64) {  //check text name
+                    return error(400, "Invalid text name");
+                }
+                if method == "PUT" {
+                    let Some(object) = body.as_object() else { //body must be JSON object
+                        return error(400, "Expected object");
+                    };
+                    if object.len() != 1 {  //only one field
+                        return error(400, "Expected only text");
+                    }
+                    //get text field
+                    let Some(text) = object
+                        .get("text")
+                        .and_then(Value::as_str)
+                    else {
+                        return error(400, "Expected text");
+                    };
+                    //check text length
+                    if text.len() > 65_536 {
+                        return error(413, "Text too large");
+                    }
+                    //save text
+                    user.texts.insert(
+                        text_name.to_owned(),
+                        text.to_owned(),
+                    );
+                    return (200, json!({"data": null}));
+                }
+            }
+
             if method == "DELETE" && path == "/sessions/current" {
                 user.token = None;
                 return (200, json!({"data": null}));
