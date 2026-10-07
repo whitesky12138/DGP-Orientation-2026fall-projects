@@ -127,6 +127,58 @@ fn unimplemented_routes_are_absent() {
 }
 
 #[test]
+fn http_echo_and_text_flow() {
+    let client = Client::tracked(create_app()).unwrap();
+
+    let echo = client
+        .post("/echo")
+        .header(ContentType::JSON)
+        .body(r#"{"text":"你好\nRM"}"#)
+        .dispatch();
+    assert_eq!(echo.status(), Status::Ok);
+    assert_eq!(
+        echo.into_json::<Value>().unwrap(),
+        json!({"data":"你好\nRM"})
+    );
+
+    let account = json!({"username":"alice", "password":"password1"}).to_string();
+    assert_eq!(
+        client
+            .post("/users")
+            .header(ContentType::JSON)
+            .body(&account)
+            .dispatch()
+            .status(),
+        Status::Created
+    );
+    let login = client
+        .post("/sessions")
+        .header(ContentType::JSON)
+        .body(&account)
+        .dispatch()
+        .into_json::<Value>()
+        .unwrap();
+    let authorization = format!("Bearer {}", login["data"]["token"].as_str().unwrap());
+
+    assert_eq!(
+        client
+            .put("/texts/note")
+            .header(ContentType::JSON)
+            .header(Header::new("Authorization", authorization.clone()))
+            .body(r#"{"text":"saved"}"#)
+            .dispatch()
+            .status(),
+        Status::Ok
+    );
+    let text = client
+        .get("/texts/note")
+        .header(Header::new("Authorization", authorization))
+        .dispatch();
+    assert_eq!(text.status(), Status::Ok);
+    assert_eq!(text.into_json::<Value>().unwrap(), json!({"data":"saved"}));
+}
+
+#[test]
 fn http_echo_round_trip() {
     let client = Client::tracked(create_app()).unwrap();
 
