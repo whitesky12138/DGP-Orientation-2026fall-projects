@@ -193,14 +193,16 @@ impl Service {
                 );
                 return (201, json!({"data": {"username": name}}));
             }
-            let (salt, expected) = {
+
+            let (user_id,salt, expected) = {
                 let users = self.users.lock().unwrap();
                 let Some(user) = users.get(name) else {
                     return error(401, "Invalid username or password");
                 };
-                (user.salt, user.digest)
+                (user.id,user.salt, user.digest)
             };
             let digest = password_hash(password, &salt);
+            
             let mut users = self.users.lock().unwrap();
             let Some(user) = users.get_mut(name) else {
                 return error(401, "Invalid username or password");
