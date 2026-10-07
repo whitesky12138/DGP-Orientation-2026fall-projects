@@ -7,6 +7,8 @@ use sha2::Sha256;
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 use subtle::ConstantTimeEq;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub const ROUTES: &[(&str, &str)] = &[
     ("GET", "/ping"),
@@ -52,16 +54,23 @@ pub fn route_error(method: &str, path: &str) -> Option<u16> {
     }
 }
 
+//save content and period at the same time
+struct Session {
+    value: String,
+    expires_at: Instant,
+}
 pub struct User {
     pub salt: [u8; 16],
     pub digest: [u8; 32],
-    pub token: Option<String>,
+    token: Option<Session>,
     pub texts: BTreeMap<String, String>,
 }
 
 #[derive(Default)]
 pub struct Service {
     pub users: Mutex<BTreeMap<String, User>>,
+    token_ttl: Duration, //validity period
+    next_user_id: AtomicU64, //assign unique ID to new user to distinguish accounts at different life cycle stages
 }
 
 pub fn error(status: u16, message: &str) -> (u16, Value) {
