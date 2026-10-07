@@ -1,5 +1,6 @@
 use rm_server_async::Service;
 use serde_json::{Value, json};
+use std::time::Duration;
 
 #[test]
 fn input_validation_and_baseline() {
@@ -44,4 +45,55 @@ fn concurrent_registration_has_one_winner() {
         .collect();
     assert_eq!(statuses.iter().filter(|&&s| s == 201).count(), 1);
     assert_eq!(statuses.iter().filter(|&&s| s == 409).count(), 3);
+}
+
+#[test]
+fn echo_and_text_lifecycle() {
+    let service = Service::default();
+    let account = json!({"username":"alice", "password":"password1"});
+
+    assert_eq!(service.handle("POST", "/users", &account, "").0, 201);
+
+    let login = service.handle("POST", "/sessions", &account, "").1;
+    let token = format!("Bearer {}", login["data"]["token"].as_str().unwrap());
+    //echo_test
+    assert_eq!(
+        service.handle("POST", "/echo", &json!({"text":"hello\nRM"}), ""),
+        (200, json!({"data":"hello\nRM"}))
+    );
+    //text put/get test
+    assert_eq!(
+        service
+            .handle("PUT", "/texts/note", &json!({"text":"first"}), &token,)
+            .0,
+        200
+    );
+    assert_eq!(
+        service.handle("GET", "/texts/note", &Value::Null, &token),
+        (200, json!({"data":"first"}))
+    );
+    //cover test
+    assert_eq!(
+        service
+            .handle("PUT", "/texts/note", &json!({"text":"second"}), &token,)
+            .0,
+        200
+    );
+    assert_eq!(
+        service.handle("GET", "/texts", &Value::Null, &token),
+        (200, json!({"data":["note"]}))
+    );
+    assert_eq!(
+        service.handle("GET", "/texts/note", &Value::Null, &token),
+        (200, json!({"data":"second"}))
+    );
+    //delete test
+    assert_eq!(
+        service.handle("DELETE", "/texts/note", &Value::Null, &token),
+        (200, json!({"data":null}))
+    );
+    assert_eq!(
+        service.handle("GET", "/texts/note", &Value::Null, &token).0,
+        404
+    );
 }
