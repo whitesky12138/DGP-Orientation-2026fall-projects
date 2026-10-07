@@ -97,3 +97,71 @@ fn echo_and_text_lifecycle() {
         404
     );
 }
+
+#[test]
+fn users_are_isolated_and_logout_deletes_data() {
+    let service = Service::default();
+    let alice = json!({"username":"alice", "password":"password1"});
+    let bob = json!({"username":"bob", "password":"password1"});
+
+    assert_eq!(service.handle("POST", "/users", &alice, "").0, 201);
+    assert_eq!(service.handle("POST", "/users", &bob, "").0, 201);
+
+    let alice_login = service.handle("POST", "/sessions", &alice, "").1;
+    let alice_token = format!("Bearer {}", alice_login["data"]["token"].as_str().unwrap());
+    let bob_login = service.handle("POST", "/sessions", &bob, "").1;
+    let bob_token = format!("Bearer {}", bob_login["data"]["token"].as_str().unwrap());
+    
+    //Confirm that the two users read different content
+    assert_eq!(
+        service
+            .handle(
+                "PUT",
+                "/texts/note",
+                &json!({"text":"alice text"}),
+                &alice_token,
+            )
+            .0,
+        200
+    );
+    assert_eq!(
+        service
+            .handle(
+                "PUT",
+                "/texts/note",
+                &json!({"text":"bob text"}),
+                &bob_token,
+            )
+            .0,
+        200
+    );
+    assert_eq!(
+        service.handle("GET", "/texts/note", &Value::Null, &alice_token),
+        (200, json!({"data":"alice text"}))
+    );
+    assert_eq!(
+        service.handle("GET", "/texts/note", &Value::Null, &bob_token),
+        (200, json!({"data":"bob text"}))
+    );
+    //delete test
+    assert_eq!(
+        service.handle("DELETE", "/users/me", &Value::Null, &alice_token),
+        (200, json!({"data":null}))
+    );
+    //access with old token after logout
+    assert_eq!(
+        service
+            .handle("GET", "/texts", &Value::Null, &alice_token)
+            .0,
+        401
+    );
+    //re-register with the same name
+    assert_eq!(service.handle("POST", "/users", &alice, "").0, 201);
+    let new_login = service.handle("POST", "/sessions", &alice, "").1;
+    let new_token = format!("Bearer {}", new_login["data"]["token"].as_str().unwrap());
+    assert_eq!(
+        service.handle("GET", "/texts", &Value::Null, &new_token),
+        (200, json!({"data":[]}))
+    );
+}
+
