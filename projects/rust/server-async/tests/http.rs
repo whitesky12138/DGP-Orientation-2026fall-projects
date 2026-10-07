@@ -125,3 +125,20 @@ fn unimplemented_routes_are_absent() {
         );
     }
 }
+
+#[test]
+fn http_echo_round_trip() {
+    let client = Client::tracked(create_app()).unwrap();
+
+    let response = client
+        .post("/echo")
+        .header(ContentType::JSON)
+        .body("{\"text\":\"test\"}")
+        .dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+        response.into_json::<Value>().unwrap(),
+        json!({"data": "test"})
+    );
+}
