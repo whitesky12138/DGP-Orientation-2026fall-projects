@@ -165,3 +165,20 @@ fn users_are_isolated_and_logout_deletes_data() {
     );
 }
 
+#[test]
+fn expired_token_is_rejected() {
+    let service = Service::with_token_ttl_seconds(1);
+    let account = json!({"username":"alice", "password":"password1"});
+
+    assert_eq!(service.handle("POST", "/users", &account, "").0, 201);
+    let login = service.handle("POST", "/sessions", &account, "").1;
+    //check after login
+    assert_eq!(login["data"]["expires_in"], json!(1));
+    let token = format!("Bearer {}", login["data"]["token"].as_str().unwrap());
+    //access before expiration
+    assert_eq!(service.handle("GET", "/texts", &Value::Null, &token).0, 200);
+    //wait for expiration
+    std::thread::sleep(Duration::from_millis(1_100));
+    //access again
+    assert_eq!(service.handle("GET", "/texts", &Value::Null, &token).0, 401);
+}
