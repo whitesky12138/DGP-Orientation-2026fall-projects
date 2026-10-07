@@ -283,6 +283,14 @@ impl Service {
                     );
                     return (200, json!({"data": null}));
                 }
+
+                if method == "GET" {
+                    let Some(text) = user.texts.get(text_name) else {
+                    return error(404, "Text not found");
+                };
+                return (200, json!({"data": text}));
+                }
+                
             }
 
             if method == "DELETE" && path == "/sessions/current" {
