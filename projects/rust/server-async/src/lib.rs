@@ -227,7 +227,14 @@ impl Service {
                 }),
             );
         }
-        let protected = matches!(path, "/texts" | "/sessions/current");
+        
+        //login verification
+        let protected =
+            path == "/texts"
+                || path == "/sessions/current"
+                || path == "/users/me"
+                || text_name(path).is_some();
+
         if protected {
             let token = authorization.strip_prefix("Bearer ").unwrap_or("");
             let mut users = self.users.lock().unwrap();
