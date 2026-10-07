@@ -109,6 +109,29 @@ impl Service {
         if method == "GET" && path == "/ping" {
             return (200, json!({"data": "pong"}));
         }
+
+        if method == "POST" && path == "/echo" {
+            let Some(object) = body.as_object() else {
+                //verify request body is a JSON object
+                return error(400, "Expected object");
+            };
+            if object.len() != 1 {
+                //confirm only one field
+                return error(400, "Expected only text");
+            }
+            let Some(text) = object //Get the text field
+                .get("text")
+                .and_then(Value::as_str)
+            else {
+                return error(400, "Expected text");
+            };
+            if text.len() > 65_536 {
+                //text length constrain
+                return error(413, "Text too large");
+            }
+            return (200, json!({"data": text}));
+        }
+
         if method == "POST" && matches!(path, "/users" | "/sessions") {
             let Some(name) = body.get("username").and_then(Value::as_str) else {
                 return error(400, "Expected username");
