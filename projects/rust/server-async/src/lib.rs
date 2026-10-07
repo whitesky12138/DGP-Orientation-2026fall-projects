@@ -251,6 +251,11 @@ impl Service {
             let Some(name) = name else {
                 return error(401, "Login required");
             };
+            if method == "DELETE" && path == "/users/me" {
+                users.remove(&name);
+
+                return (200, json!({"data": null}));
+            }
             let user = users.get_mut(&name).unwrap();
            
             // implement PUT /texts/{name}
