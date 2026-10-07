@@ -60,7 +60,7 @@ struct Session {
     expires_at: Instant,
 }
 pub struct User {
-    id:u64,
+    id: u64,
     pub salt: [u8; 16],
     pub digest: [u8; 32],
     token: Option<Session>,
@@ -195,12 +195,12 @@ impl Service {
                 return (201, json!({"data": {"username": name}}));
             }
 
-            let (user_id,salt, expected) = {
+            let (user_id, salt, expected) = {
                 let users = self.users.lock().unwrap();
                 let Some(user) = users.get(name) else {
                     return error(401, "Invalid username or password");
                 };
-                (user.id,user.salt, user.digest)
+                (user.id, user.salt, user.digest)
             };
             let digest = password_hash(password, &salt);
 
@@ -230,23 +230,24 @@ impl Service {
         }
 
         //login verification
-        let protected =
-            path == "/texts"
-                || path == "/sessions/current"
-                || path == "/users/me"
-                || text_name(path).is_some();
+        let protected = path == "/texts"
+            || path == "/sessions/current"
+            || path == "/users/me"
+            || text_name(path).is_some();
 
         if protected {
             let token = authorization.strip_prefix("Bearer ").unwrap_or("");
             let mut users = self.users.lock().unwrap();
-            
+
             let now = Instant::now(); //record current time
             let name = users
                 .iter()
-                .find(|(_, user)| {!token.is_empty() && user.token.as_ref().is_some_and(|session| {
-                                                session.value == token  //token values are the same
+                .find(|(_, user)| {
+                    !token.is_empty()
+                        && user.token.as_ref().is_some_and(|session| {
+                            session.value == token  //token values are the same
                                                 && now < session.expires_at //token not expired
-                                            })
+                        })
                 })
                 .map(|(name, _)| name.clone());
             let Some(name) = name else {
@@ -260,24 +261,24 @@ impl Service {
             }
 
             let user = users.get_mut(&name).unwrap();
-           
+
             // implement PUT /texts/{name}
-            if let Some(text_name) = text_name(path){
-                if !valid_name(text_name, 64) {  //check text name
+            if let Some(text_name) = text_name(path) {
+                if !valid_name(text_name, 64) {
+                    //check text name
                     return error(400, "Invalid text name");
                 }
                 if method == "PUT" {
-                    let Some(object) = body.as_object() else { //body must be JSON object
+                    let Some(object) = body.as_object() else {
+                        //body must be JSON object
                         return error(400, "Expected object");
                     };
-                    if object.len() != 1 {  //only one field
+                    if object.len() != 1 {
+                        //only one field
                         return error(400, "Expected only text");
                     }
                     //get text field
-                    let Some(text) = object
-                        .get("text")
-                        .and_then(Value::as_str)
-                    else {
+                    let Some(text) = object.get("text").and_then(Value::as_str) else {
                         return error(400, "Expected text");
                     };
                     //check text length
@@ -285,20 +286,17 @@ impl Service {
                         return error(413, "Text too large");
                     }
                     //save text
-                    user.texts.insert(
-                        text_name.to_owned(),
-                        text.to_owned(),
-                    );
+                    user.texts.insert(text_name.to_owned(), text.to_owned());
                     return (200, json!({"data": null}));
                 }
 
                 if method == "GET" {
                     let Some(text) = user.texts.get(text_name) else {
                         return error(404, "Text not found");
-                };
-                return (200, json!({"data": text}));
+                    };
+                    return (200, json!({"data": text}));
                 }
-                
+
                 if method == "DELETE" {
                     if user.texts.remove(text_name).is_none() {
                         return error(404, "Text not found");

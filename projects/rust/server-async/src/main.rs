@@ -1,5 +1,5 @@
 use clap::Parser;
-use rm_server_async::{http::with_service,Service};
+use rm_server_async::{Service, http::with_service};
 use std::net::SocketAddr;
 
 #[derive(Parser)]
@@ -18,10 +18,7 @@ struct Args {
 #[rocket::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    let service =
-        Service::with_token_ttl_seconds(
-            args.token_ttl_seconds,
-        );
+    let service = Service::with_token_ttl_seconds(args.token_ttl_seconds);
 
     let app = with_service(service);
     let config = app

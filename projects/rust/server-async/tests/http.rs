@@ -111,7 +111,7 @@ fn http_input_and_routing() {
 #[test]
 fn unimplemented_routes_are_absent() {
     let client = Client::tracked(create_app()).unwrap();
-    
+
     for path in [
         "/ping",
         "/users",

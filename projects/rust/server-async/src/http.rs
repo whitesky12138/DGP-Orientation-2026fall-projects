@@ -145,12 +145,8 @@ pub fn with_service(service: Service) -> Rocket<Build> {
         Method::Connect,
     ]
     .into_iter()
-    .map(|method| {
-        Route::new(method, "/<_..>", dispatch.clone())
-    })
+    .map(|method| Route::new(method, "/<_..>", dispatch.clone()))
     .collect();
 
-    rocket::build()
-        .attach(ConsoleOutput)
-        .mount("/", routes)
+    rocket::build().attach(ConsoleOutput).mount("/", routes)
 }
