@@ -21,6 +21,18 @@ pub const ROUTES: &[(&str, &str)] = &[
     ("GET", "/texts/{name}"),
 ];
 
+//text name extraction
+fn text_name(path: &str) -> Option<&str> {
+    let name = path.strip_prefix("/texts/")?;
+
+    if name.contains('/') {
+        //invalid"/"
+        None
+    } else {
+        Some(name)
+    }
+}
+
 pub fn route_error(method: &str, path: &str) -> Option<u16> {
     match ROUTES.iter().find(|(_, route)| *route == path) {
         None => Some(404),
