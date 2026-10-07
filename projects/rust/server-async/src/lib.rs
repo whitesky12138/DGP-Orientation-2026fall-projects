@@ -178,6 +178,11 @@ impl Service {
                 if users.contains_key(name) {
                     return error(409, "Username exists");
                 }
+
+                let id = self
+                    .next_user_id
+                    .fetch_add(1, Ordering::Relaxed);
+
                 users.insert(
                     name.into(),
                     User {
@@ -204,10 +209,22 @@ impl Service {
             if user.salt != salt || !bool::from(digest.ct_eq(&expected)) {
                 return error(401, "Invalid username or password");
             }
+
             let token = new_token();
-            user.token = Some(token.clone());
-            // Later server task: record a deadline and include expires_in.
-            return (200, json!({"data": {"token": token}}));
+            let expires_at = Instant::now() + self.token_ttl; //count expiaration time of the token
+            let expires_in = self.token_ttl.as_secs();  //convert to integer seconds
+            
+            user.token = Some(Session {
+                value: token.clone(),
+                expires_at,
+            });
+            
+            return (
+                200,
+                json!({
+                    "data": {"token": token,"expires_in": expires_in}
+                }),
+            );
         }
         let protected = matches!(path, "/texts" | "/sessions/current");
         if protected {
