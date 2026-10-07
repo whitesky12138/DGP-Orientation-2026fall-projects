@@ -34,6 +34,17 @@ fn text_name(path: &str) -> Option<&str> {
 }
 
 pub fn route_error(method: &str, path: &str) -> Option<u16> {
+    // dynamic text path
+    if text_name(path).is_some() {
+        return if matches!(method, "PUT" | "GET" | "DELETE") {
+            // /texts/{name} support PUT、GET、DELETE
+            None
+        } else {
+            // path exists,but HTTP method is not support
+            Some(405)
+        };
+    }
+    // fixed path
     match ROUTES.iter().find(|(_, route)| *route == path) {
         None => Some(404),
         Some((allowed, _)) if *allowed != method => Some(405),
