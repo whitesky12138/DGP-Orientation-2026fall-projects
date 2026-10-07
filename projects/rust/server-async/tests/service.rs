@@ -111,7 +111,7 @@ fn users_are_isolated_and_logout_deletes_data() {
     let alice_token = format!("Bearer {}", alice_login["data"]["token"].as_str().unwrap());
     let bob_login = service.handle("POST", "/sessions", &bob, "").1;
     let bob_token = format!("Bearer {}", bob_login["data"]["token"].as_str().unwrap());
-    
+
     //Confirm that the two users read different content
     assert_eq!(
         service
