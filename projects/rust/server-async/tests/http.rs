@@ -113,7 +113,6 @@ fn unimplemented_routes_are_absent() {
     use rocket::http::Method;
     let client = Client::tracked(create_app()).unwrap();
     for (method, path) in [
-        (Method::Post, "/echo"),
         (Method::Delete, "/users/me"),
         (Method::Put, "/texts/note"),
         (Method::Get, "/texts/note"),

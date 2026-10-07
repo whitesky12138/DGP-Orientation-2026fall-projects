@@ -60,6 +60,7 @@ struct Session {
     expires_at: Instant,
 }
 pub struct User {
+    id:u64,
     pub salt: [u8; 16],
     pub digest: [u8; 32],
     token: Option<Session>,
@@ -207,7 +208,7 @@ impl Service {
             let Some(user) = users.get_mut(name) else {
                 return error(401, "Invalid username or password");
             };
-            if user.salt != salt || !bool::from(digest.ct_eq(&expected)) {
+            if user.salt != salt || user.id != user_id || !bool::from(digest.ct_eq(&expected)) {
                 return error(401, "Invalid username or password");
             }
 
@@ -257,7 +258,7 @@ impl Service {
 
                 return (200, json!({"data": null}));
             }
-            
+
             let user = users.get_mut(&name).unwrap();
            
             // implement PUT /texts/{name}
